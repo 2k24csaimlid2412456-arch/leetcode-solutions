@@ -1,29 +1,50 @@
-class Solution {
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Solution {
     public int[] countServers(int n, int[][] logs, int x, int[] queries) {
-        Arrays.sort(logs, (a, b) -> a[1] - b[1]);
-        int m = queries.length;
-        int[][] qs = new int[m][0];
-        for (int i = 0; i < m; ++i) {
-            qs[i] = new int[] {queries[i], i};
+        int qLen = queries.length;
+        int[][] sortedQueries = new int[qLen][2];
+        for (int i = 0; i < qLen; i++) {
+            sortedQueries[i][0] = queries[i];
+            sortedQueries[i][1] = i;
         }
-        Arrays.sort(qs, (a, b) -> a[0] - b[0]);
-        Map<Integer, Integer> cnt = new HashMap<>();
-        int[] ans = new int[m];
-        int j = 0, k = 0;
-        for (var q : qs) {
-            int r = q[0], i = q[1];
-            int l = r - x;
-            while (k < logs.length && logs[k][1] <= r) {
-                cnt.merge(logs[k++][0], 1, Integer::sum);
+
+        Arrays.sort(logs, (a, b) -> Integer.compare(a[1], b[1]));
+        Arrays.sort(sortedQueries, (a, b) -> Integer.compare(a[0], b[0]));
+
+        int[] result = new int[qLen];
+        Map<Integer, Integer> serverCounts = new HashMap<>();
+        
+        int left = 0;
+        int right = 0;
+
+        for (int i = 0; i < qLen; i++) {
+            int queryTime = sortedQueries[i][0];
+            int originalIndex = sortedQueries[i][1];
+            int windowStart = queryTime - x;
+
+            while (right < logs.length && logs[right][1] <= queryTime) {
+                int serverId = logs[right][0];
+                serverCounts.put(serverId, serverCounts.getOrDefault(serverId, 0) + 1);
+                right++;
             }
-            while (j < logs.length && logs[j][1] < l) {
-                if (cnt.merge(logs[j][0], -1, Integer::sum) == 0) {
-                    cnt.remove(logs[j][0]);
+
+            while (left < logs.length && logs[left][1] < windowStart) {
+                int serverId = logs[left][0];
+                if (serverCounts.containsKey(serverId)) {
+                    serverCounts.put(serverId, serverCounts.get(serverId) - 1);
+                    if (serverCounts.get(serverId) == 0) {
+                        serverCounts.remove(serverId);
+                    }
                 }
-                j++;
+                left++;
             }
-            ans[i] = n - cnt.size();
+
+            result[originalIndex] = n - serverCounts.size();
         }
-        return ans;
+
+        return result;
     }
 }
